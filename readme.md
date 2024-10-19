@@ -1,7 +1,7 @@
 # Crypto Prediction Bot
 
 ## Overview
-This bot is designed to predict cryptocurrency price movements and place bets based on those predictions. It uses historical data, technical indicators, and machine learning techniques to make informed decisions.
+This bot is designed to predict cryptocurrency price movements and place bets based on those predictions on [Pancakeswap's Prediction game](https://pancakeswap.finance/prediction?token=BNB). It uses historical data, technical indicators, and machine learning techniques to make informed decisions.
 
 ## Features
 - Real-time monitoring of cryptocurrency rounds
@@ -14,8 +14,8 @@ This bot is designed to predict cryptocurrency price movements and place bets ba
 ## Installation
 Clone the repository:
 ```
-git clone https://github.com/yourusername/crypto-prediction-bot.git
-cd crypto-prediction-bot    
+git clone https://github.com/AllenKafchinski/Pancakeswap-Prediction-Bot
+cd Pancakeswap-Prediction-Bot    
 ```
 Install dependencies:
 ```
@@ -42,7 +42,7 @@ Then, run the backtest simulation:
 node backtestSimulator.js
 ```
 
-#Configuration
+# Configuration
 
 The bot's behavior can be customized by modifying the following files:
 
