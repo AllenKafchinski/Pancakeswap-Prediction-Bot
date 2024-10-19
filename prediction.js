@@ -1,18 +1,19 @@
 // prediction.js
 
 const logger = require('./logger');
+const config = require('./config');
 const { calculateRSI, calculateMACD, calculateSMA, calculateEMA, calculateBollingerBands, calculateStochasticOscillator } = require('./indicators');
 const { RandomForestPredictor, prepareFeatures, prepareLabels } = require('./randomForests');
 
 // Bet Size Parameters
 const BET_SIZES = {
-    minBet: 0.0001, // Minimum bet in BNB
-    maxBet: 0.005  // Maximum bet in BNB
+    minBet: config.betMin, // Minimum bet in BNB
+    maxBet: config.betMax  // Maximum bet in BNB
 };
 
 const CONFIDENCE_SCORE = {
-    min: -3, // Minimum possible score
-    max: 3   // Maximum possible score
+    min: config.minConfidence, // Minimum possible score
+    max: config.maxConfidence   // Maximum possible score
 };
 
 /**
@@ -148,9 +149,9 @@ async function getPrediction(priceBuffer) {
         const betSize = mapScoreToBetSize(Math.abs(confidenceScore));
 
         let predictionDirection = null; // Default prediction
-        if (confidenceScore > 0.10) {
+        if (confidenceScore > config.bullConfidence) {
             predictionDirection = 'bull';
-        } else if (confidenceScore < -0.10) {
+        } else if (confidenceScore < config.bearConfidence) {
             predictionDirection = 'bear';
         }
 
