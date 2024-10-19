@@ -14,8 +14,8 @@ This bot is designed to predict cryptocurrency price movements and place bets ba
 ## Installation
 Clone the repository:
 ```
-git clone https://github.com/yourusername/crypto-prediction-bot.git
-cd crypto-prediction-bot    
+git clone https://github.com/AllenKafchinski/Pancakeswap-Prediction-Bot
+cd Pancakeswap-Prediction-Bot    
 ```
 Install dependencies:
 ```
