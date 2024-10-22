@@ -59,33 +59,35 @@ function calculateMACD(prices, fastPeriod = 12, slowPeriod = 26, signalPeriod = 
     try {
         if (!Array.isArray(prices) || prices.length < Math.max(fastPeriod, slowPeriod) + signalPeriod) {
             logger.error(`Invalid input for MACD calculation. Prices length: ${prices.length}`);
-            return null;
+            return { MACD: [0], signal: [0], histogram: [0] };
         }
 
         const fastEMA = calculateEMA(prices, fastPeriod);
         const slowEMA = calculateEMA(prices, slowPeriod);
 
-        if (!fastEMA || !slowEMA) {
+        if (!fastEMA || !slowEMA || fastEMA.length === 0 || slowEMA.length === 0) {
             logger.error('Failed to calculate EMA for MACD');
-            return null;
+            return { MACD: [0], signal: [0], histogram: [0] };
         }
 
         const macdLine = fastEMA.map((fast, i) => fast - slowEMA[i]);
         const signalLine = calculateEMA(macdLine, signalPeriod);
 
-        if (!signalLine) {
+        if (!signalLine || signalLine.length === 0) {
             logger.error('Failed to calculate signal line for MACD');
-            return null;
+            return { MACD: [0], signal: [0], histogram: [0] };
         }
+
+        const histogram = macdLine.map((macd, i) => macd - signalLine[i]);
 
         return {
             MACD: macdLine,
             signal: signalLine,
-            histogram: macdLine.map((macd, i) => macd - signalLine[i])
+            histogram: histogram
         };
     } catch (error) {
         logger.error('Error in MACD calculation:', error);
-        return null;
+        return { MACD: [0], signal: [0], histogram: [0] };
     }
 }
 

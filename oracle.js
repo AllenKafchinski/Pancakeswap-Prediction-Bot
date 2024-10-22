@@ -48,6 +48,7 @@ async function getLatestPrice() {
     }
 }
 
+
 /**
  * Fetches historical prices between startRound and endRound.
  * @param {ethers.BigNumber} startRound - Starting round ID.
@@ -57,22 +58,22 @@ async function getLatestPrice() {
 async function getHistoricalPrices(startRound, endRound) {
     const prices = [];
     try {
-        const requiredRounds = endRound.sub(startRound).toNumber() + 1;
+        startRound = ethers.BigNumber.from(startRound.toString());
+        endRound = ethers.BigNumber.from(endRound.toString());
 
-        for (let i = 0; i < requiredRounds; i++) {
-            const roundId = endRound.sub(i);
+        for (let currentRound = startRound; currentRound.lte(endRound); currentRound = currentRound.add(1)) {
             try {
-                const roundData = await oracleContract.getRoundData(roundId);
+                const roundData = await oracleContract.getRoundData(currentRound);
                 const decimals = await oracleContract.decimals();
                 const price = Number(ethers.utils.formatUnits(roundData.answer, decimals));
-                const timestamp = roundData.updatedAt.toNumber(); // Assuming timestamp is within safe integer range
+                const timestamp = roundData.updatedAt.toNumber();
                 prices.push({ 
-                    roundId: roundId.toString(), 
+                    roundId: currentRound.toString(), 
                     price, 
                     timestamp 
                 });
             } catch (error) {
-                logger.error(`Error fetching roundData for roundId ${roundId.toString()}: ${error}`);
+                logger.error(`Error fetching roundData for roundId ${currentRound.toString()}: ${error}`);
             }
         }
 

@@ -25,6 +25,7 @@ function calculateConfidence(indicators) {
     let score = 0;
 
     // RSI Scoring
+    logger.info(`RSI: ${indicators.RSI}`)
     if (indicators.RSI < 30) {
         score += 2; // Strong Bullish
     } else if (indicators.RSI < 50) {
@@ -47,6 +48,7 @@ function calculateConfidence(indicators) {
     }
 
     // Bollinger Bands Scoring
+    logger.info(`Current round finish Price: ${indicators.price}`)
     if (indicators.price < indicators.bollingerBands.lower) {
         score += 1; // Potential Bullish Reversal
     } else if (indicators.price > indicators.bollingerBands.upper) {
@@ -81,6 +83,10 @@ function mapScoreToBetSize(score) {
     const { minBet, maxBet } = BET_SIZES;
     const { min, max } = CONFIDENCE_SCORE;
 
+    // Ensure minBet and maxBet are numbers
+    const minBetNum = Number(minBet);
+    const maxBetNum = Number(maxBet);
+
     // Clamp the score within the defined range
     const clampedScore = Math.max(min, Math.min(max, score));
 
@@ -88,9 +94,18 @@ function mapScoreToBetSize(score) {
     const normalized = 1 / (1 + Math.exp(-clampedScore));
 
     // Calculate bet size
-    const betSize = minBet + normalized * (maxBet - minBet);
+    const betSize = minBetNum + normalized * (maxBetNum - minBetNum);
 
-    return betSize;
+    // Ensure betSize is a number
+    if (isNaN(betSize)) {
+        logger.error('Calculated betSize is NaN, defaulting to minBet');
+        return minBetNum;
+    }
+
+    // Log the calculated bet size
+    logger.info(`Calculated Bet Size: ${betSize.toFixed(4)} BNB`);
+
+    return betSize; // Return betSize as a number
 }
 
 /**
@@ -100,8 +115,9 @@ function mapScoreToBetSize(score) {
  */
 async function getPrediction(priceBuffer) {
     if (!Array.isArray(priceBuffer) || priceBuffer.length < 100) {
-        logger.warn('Not enough data to make a prediction.');
-        return { prediction: 'bear', betSize: BET_SIZES.minBet }; // Default to a small bet
+        logger.warn('Not enough data to make a prediction. Price buffer length is:');
+        logger.warn(`${priceBuffer}, ${priceBuffer.length}`)
+        return { prediction: null, betSize: BET_SIZES.minBet }; // Default to a small bet
     }
 
     try {
@@ -127,6 +143,9 @@ async function getPrediction(priceBuffer) {
         // Calculate technical indicators
         const rsi = calculateRSI(priceBuffer, 14);
         const macd = calculateMACD(priceBuffer, 12, 26, 9);
+        logger.debug(`MACD values: ${JSON.stringify(macd)}`);
+        logger.debug(`Last MACD value: ${macd.MACD[macd.MACD.length - 1]}`);
+        logger.debug(`Last Signal value: ${macd.signal[macd.signal.length - 1]}`);
         const sma20 = calculateSMA(priceBuffer, 20);
         const ema20 = calculateEMA(priceBuffer, 20);
         const bb = calculateBollingerBands(priceBuffer, 20, 2);
@@ -134,13 +153,16 @@ async function getPrediction(priceBuffer) {
 
         // Combine Random Forest prediction with technical indicators
         const technicalScore = calculateConfidence({
-            RSI: rsi[rsi.length - 1],
-            MACD: macd.MACD[macd.MACD.length - 1],
-            Signal: macd.signal[macd.signal.length - 1],
-            SMA20: sma20[sma20.length - 1],
-            EMA20: ema20[ema20.length - 1],
-            bollingerBands: bb[bb.length - 1],
-            stochastic: { percentK: stoch.k[stoch.k.length - 1], percentD: stoch.d[stoch.d.length - 1] },
+            RSI: rsi.length > 0 ? rsi[rsi.length - 1] : 50,
+            MACD: macd.MACD.length > 0 ? macd.MACD[macd.MACD.length - 1] : 0,
+            Signal: macd.signal.length > 0 ? macd.signal[macd.signal.length - 1] : 0,
+            SMA20: sma20.length > 0 ? sma20[sma20.length - 1] : priceBuffer[priceBuffer.length - 1],
+            EMA20: ema20.length > 0 ? ema20[ema20.length - 1] : priceBuffer[priceBuffer.length - 1],
+            bollingerBands: bb.length > 0 ? bb[bb.length - 1] : { upper: 0, middle: 0, lower: 0 },
+            stochastic: { 
+                percentK: stoch.k.length > 0 ? stoch.k[stoch.k.length - 1] : 50, 
+                percentD: stoch.d.length > 0 ? stoch.d[stoch.d.length - 1] : 50 
+            },
             price: priceBuffer[priceBuffer.length - 1]
         });
 
@@ -156,7 +178,7 @@ async function getPrediction(priceBuffer) {
         }
 
         logger.info(`Combined Prediction: ${combinedScore}, Confidence Score: ${confidenceScore}, Bet Size: ${betSize.toFixed(4)} BNB, Prediction: ${predictionDirection}`);
-        return { prediction: predictionDirection, betSize };
+return { prediction: predictionDirection, betSize: Number(betSize) }; // Ensure betSize is a number
     } catch (error) {
         logger.error('Error in getPrediction:', error);
         return { prediction: null, betSize: BET_SIZES.minBet }; // Default to a small bet

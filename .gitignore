@@ -4,3 +4,5 @@ node_modules/
 bot.log
 historicalRounds.json
 profitability.db
+historicalData.db
+jsonToSQLite.js
