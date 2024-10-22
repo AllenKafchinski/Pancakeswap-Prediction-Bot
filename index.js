@@ -1,15 +1,16 @@
 // index.js
 
 const { ethers } = require('ethers');
+const fs = require('fs');
 const config = require('./config');
 const logger = require('./logger');
 const profitTracker = require('./profitTracker');
 const { getPrediction } = require('./prediction'); // Your prediction module
 const oracleABI = JSON.parse(fs.readFileSync('./ABIS/oracleABI.json', 'utf8'));
-const PREDICTION_ABI = JSON.parse(fs.readFileSync('./ABIS/predictionABI.json', 'utf8'));
+const PREDICTION_ABI = JSON.parse(fs.readFileSync('./ABIS/contractABI.json', 'utf8'));
 
 // Initialize Provider
-const provider = new ethers.providers.JsonRpcProvider(config.rpcUrl);
+const provider = new ethers.providers.JsonRpcProvider(config.quicknodeRpcUrl);
 
 // Initialize Oracle Contract Instance
 const oracleContract = new ethers.Contract(config.oracleContractAddress, oracleABI, provider);
@@ -59,7 +60,7 @@ async function monitorRounds() {
     while (true) {
         const currentRound = await getCurrentRoundData();
         if (!currentRound) {
-            await sleep(500); // Wait for 0.5 second before retrying
+            await sleep(100); // Wait for 0.5 second before retrying
             continue;
         }
         if (currentRound.roundId !== lastRoundId) {
