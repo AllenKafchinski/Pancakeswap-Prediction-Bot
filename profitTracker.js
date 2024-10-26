@@ -19,6 +19,9 @@ db.serialize(() => {
         startingPrice REAL
     )`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_roundId ON bets (roundId)`);
+    
+    // Add this line
+    addPaperTradeColumn().catch(err => logger.error('Error adding paperTrade column:', err));
 });
 
 /**
@@ -28,7 +31,7 @@ db.serialize(() => {
  */
 function recordBets(bets) {
     return new Promise((resolve, reject) => {
-        const chunkSize = 1000; // Adjust based on your needs
+        const chunkSize = 1000;
         const chunks = [];
         
         for (let i = 0; i < bets.length; i += chunkSize) {
@@ -38,40 +41,107 @@ function recordBets(bets) {
         db.serialize(() => {
             db.run('BEGIN TRANSACTION');
 
-            const stmt = db.prepare(`INSERT INTO bets (epoch, prediction, betSize, outcome, profitBNB, roundId, startingPrice) VALUES (?, ?, ?, ?, ?, ?, ?)`);
+            // First, try to insert with paperTrade
+            const stmtWithPaperTrade = db.prepare(`INSERT INTO bets (epoch, prediction, betSize, outcome, profitBNB, roundId, startingPrice, paperTrade) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
             
-            chunks.forEach(chunk => {
-                chunk.forEach(bet => {
-                    stmt.run(bet.epoch, bet.prediction, bet.betSize, bet.outcome, bet.profitBNB, bet.roundId, bet.startingPrice, (err) => {
+            const insertBet = (bet) => {
+                return new Promise((resolve, reject) => {
+                    stmtWithPaperTrade.run(
+                        bet.epoch,
+                        bet.prediction,
+                        bet.betSize,
+                        bet.outcome,
+                        bet.profitBNB,
+                        bet.roundId,
+                        bet.startingPrice,
+                        bet.paperTrade ? 1 : 0,
+                        (err) => {
+                            if (err) {
+                                // If error is due to missing column, fall back to old insert
+                                if (err.message.includes('no column named paperTrade')) {
+                                    const stmtWithoutPaperTrade = db.prepare(`INSERT INTO bets (epoch, prediction, betSize, outcome, profitBNB, roundId, startingPrice) VALUES (?, ?, ?, ?, ?, ?, ?)`);
+                                    stmtWithoutPaperTrade.run(
+                                        bet.epoch,
+                                        bet.prediction,
+                                        bet.betSize,
+                                        bet.outcome,
+                                        bet.profitBNB,
+                                        bet.roundId,
+                                        bet.startingPrice,
+                                        (err) => {
+                                            if (err) {
+                                                reject(err);
+                                            } else {
+                                                resolve();
+                                            }
+                                        }
+                                    );
+                                    stmtWithoutPaperTrade.finalize();
+                                } else {
+                                    reject(err);
+                                }
+                            } else {
+                                resolve();
+                            }
+                        }
+                    );
+                });
+            };
+
+            Promise.all(chunks.flatMap(chunk => chunk.map(insertBet)))
+                .then(() => {
+                    stmtWithPaperTrade.finalize();
+                    db.run('COMMIT', (err) => {
                         if (err) {
-                            logger.error(`Error inserting bet: ${err.message}`);
+                            logger.error(`Commit error: ${err.message}`);
+                            reject(err);
+                        } else {
+                            resolve();
                         }
                     });
-                });
-            });
-
-            stmt.finalize(err => {
-                if (err) {
-                    db.run('ROLLBACK', rollbackErr => {
+                })
+                .catch(err => {
+                    logger.error(`Error inserting bets: ${err.message}`);
+                    db.run('ROLLBACK', (rollbackErr) => {
                         if (rollbackErr) {
                             logger.error(`Rollback error: ${rollbackErr.message}`);
                         }
                         reject(err);
                     });
-                } else {
-                    db.run('COMMIT', commitErr => {
-                        if (commitErr) {
-                            logger.error(`Commit error: ${commitErr.message}`);
-                            reject(commitErr);
-                        } else {
-                            resolve();
-                        }
-                    });
-                }
-            });
+                });
         });
     });
 }
+
+/**
+ * Updates the outcome and profit of a bet.
+ * @param {number} id - The ID of the bet to update.
+ * @param {string} outcome - The outcome of the bet ('win' or 'lose').
+ * @param {number} profitBNB - The profit (or loss) in BNB.
+ * @returns {Promise<void>}
+ */
+function updateBetOutcome(id, outcome, profitBNB) {
+    return new Promise((resolve, reject) => {
+        db.run(
+            'UPDATE bets SET outcome = ?, profitBNB = ? WHERE id = ?',
+            [outcome, profitBNB, id],
+            (err) => {
+                if (err) {
+                    logger.error(`Error updating bet outcome: ${err.message}`);
+                    reject(err);
+                } else {
+                    resolve();
+                }
+            }
+        );
+    });
+}
+
+// Don't forget to export this function
+module.exports = {
+    // ... other exports
+    updateBetOutcome,
+};
 
 /**
  * Retrieves a summary of profitability.
@@ -99,6 +169,23 @@ function getSummary() {
     });
 }
 
+function addPaperTradeColumn() {
+    return new Promise((resolve, reject) => {
+        db.run(`ALTER TABLE bets ADD COLUMN paperTrade BOOLEAN DEFAULT 0`, (err) => {
+            if (err) {
+                // If the error is because the column already exists, we can ignore it
+                if (err.message.includes('duplicate column name')) {
+                    resolve();
+                } else {
+                    reject(err);
+                }
+            } else {
+                resolve();
+            }
+        });
+    });
+}
+
 /**
  * Retrieves bet details for a specific round.
  * @param {string} roundId - The round ID to fetch details for.
@@ -114,6 +201,23 @@ function getBetDetails(roundId) {
                 resolve(row);
             }
         });
+    });
+}
+
+function updateActualProfit(roundId, actualProfitBNB) {
+    return new Promise((resolve, reject) => {
+        db.run(
+            'UPDATE bets SET actualProfitBNB = ? WHERE roundId = ?',
+            [actualProfitBNB, roundId],
+            (err) => {
+                if (err) {
+                    logger.error(`Error updating actual profit: ${err.message}`);
+                    reject(err);
+                } else {
+                    resolve();
+                }
+            }
+        );
     });
 }
 
@@ -135,4 +239,4 @@ function closeDatabase() {
     });
 }
 
-module.exports = { recordBets, getSummary, getBetDetails, closeDatabase };
+module.exports = { recordBets, getSummary, getBetDetails, closeDatabase, updateActualProfit, updateBetOutcome };
