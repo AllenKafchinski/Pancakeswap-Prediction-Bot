@@ -21,52 +21,6 @@ if (!isMainThread) {
     });
 }
 
-async function constructPriceBuffer(roundId) {
-    return new Promise((resolve, reject) => {
-        const db = new sqlite3.Database('./historicalData.db', sqlite3.OPEN_READONLY);
-        
-        const query = `
-            SELECT * 
-            FROM rounds 
-            WHERE roundId = ?
-        `;
-        
-        db.get(query, [roundId], (err, row) => {
-            if (err) {
-                logger.error(`Error fetching data for round ${roundId}:`, err);
-                db.close();
-                reject(err);
-            } else if (!row) {
-                logger.warn(`No data found for round ${roundId}`);
-                db.close();
-                resolve(null);
-            } else {
-                db.close();
-                logger.info(`Full row data for round ${roundId}: ${JSON.stringify(row)}`);
-                if (row.priceBuffer === undefined) {
-                    logger.warn(`priceBuffer is undefined for round ${roundId}`);
-                    resolve(null);
-                } else {
-                    logger.info(`Raw priceBuffer for round ${roundId}: ${row.priceBuffer}`);
-                    try {
-                        const priceBuffer = JSON.parse(row.priceBuffer);
-                        if (Array.isArray(priceBuffer)) {
-                            logger.info(`Parsed priceBuffer length for round ${roundId}: ${priceBuffer.length}`);
-                            resolve(priceBuffer);
-                        } else {
-                            logger.warn(`Invalid price buffer format for round ${roundId}. Type: ${typeof priceBuffer}`);
-                            resolve(null);
-                        }
-                    } catch (parseError) {
-                        logger.error(`Error parsing price buffer for round ${roundId}:`, parseError);
-                        resolve(null);
-                    }
-                }
-            }
-        });
-    });
-}
-
 async function runBacktestWorker(startOffset, endOffset, workerId) {
     logger.info(`Worker ${workerId} started processing from offset ${startOffset} to ${endOffset}`);
     let offset = startOffset;
