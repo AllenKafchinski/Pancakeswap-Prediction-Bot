@@ -1,15 +1,16 @@
-# Crypto Prediction Bot
+# Pancakeswap Prediction Bot
 
 ## Overview
-This bot is designed to predict cryptocurrency price movements and place bets based on those predictions on [Pancakeswap's Prediction game](https://pancakeswap.finance/prediction?token=BNB). It uses historical data, technical indicators, and machine learning techniques to make informed decisions.
+This bot is designed to predict cryptocurrency price movements and place bets based on those predictions on [Pancakeswap's Prediction game](https://pancakeswap.finance/prediction?token=BNB). It uses technical indicators to analyze price movements and make informed betting decisions, with a user-friendly UI for monitoring and control.
 
 ## Features
-- Real-time monitoring of cryptocurrency rounds
-- Backtesting capability using historical data
+- Real-time monitoring of WBNB/BUSD price from PancakeSwap liquidity pool
 - Technical indicator calculations (RSI, MACD, SMA, EMA, Bollinger Bands, Stochastic Oscillator)
-- Machine learning prediction using Random Forest algorithm
 - Automated bet placement based on confidence scores
-- Profit tracking and performance analysis
+- User-friendly web interface for monitoring and control
+- Real-time round tracking and synchronization
+- Historical round performance tracking
+- Wallet integration for live betting
 
 ## Installation
 Clone the repository:
@@ -21,78 +22,73 @@ Install dependencies:
 ```
 npm install
 ```
-Set up your environment variables in the .env.example file; rename it to .env and fill in the values.
 
 ## Usage
 
-### Running the Bot
-To start the bot in live mode:
+### Running the Bot UI
+To start the bot interface:
 ```
-node index.js
-```
-
-### Backtesting
-To run a backtest simulation:
-First, collect the historical data:
-```
-node backtest.js
-```
-Then, run the backtest simulation:
-```
-node backtestSimulator.js
+cd prediction-bot-ui
+npm install
+npm start
 ```
 
-# Configuration
+The UI will be available at `http://localhost:3000`
 
-The bot's behavior can be customized by modifying the following files:
+### Using the Interface
 
-- `prediction.js`: Adjust prediction logic and bet size parameters
+1. Connect your wallet using the "Connect Wallet" button
+2. Configure your strategy parameters in the Strategy Configuration panel
+3. Start the bot using the "Start Bot" button
+4. Monitor performance in real-time through the interface
 
-- `indicators.js`: Fine-tune technical indicator calculations
+## Components
 
-- `randomForests.js`: Modify machine learning model parameters
+### Web Interface
 
+- `LivePrediction`: Displays current round information, price chart, and active predictions
+- `RoundHistory`: Shows past rounds with their results
+- `StrategyConfig`: Configure bet sizes and strategy parameters
+- `PerformanceMetrics`: Track bot performance statistics
 
-## File Structure
+### Core Logic
 
+- `predictionLogic.js`: Core prediction algorithm using technical analysis
+- `indicatorUtils.js`: Technical indicator calculations
+- `contractUtils.js`: PancakeSwap contract interactions
+- `roundUtils.js`: Round management and tracking
+- `priceUtils.js`: Real-time price data handling
 
-- `index.js`: Main entry point for live trading
+## Technical Analysis
 
-- `backtestSimulator.js`: Simulates trading on historical data
+The bot uses several technical indicators to make predictions:
 
-- `prediction.js`: Contains prediction logic and bet size calculations
+- RSI (Relative Strength Index)
+- MACD (Moving Average Convergence Divergence)
+- Bollinger Bands
+- Stochastic Oscillator
+- SMA/EMA (Simple/Exponential Moving Averages)
 
-- `indicators.js`: Implements technical indicators
+These indicators are combined to generate a confidence score, which determines:
+1. Whether to place a bet (UP or DOWN)
+2. Bet size based on confidence level
 
-- `randomForests.js`: Implements Random Forest machine learning prediction model
+## Performance Tracking
 
-- `profitTracker.js`: Tracks and analyzes betting performance
+The interface tracks various performance metrics in real-time:
 
-- `logger.js`: Handles logging throughout the application
-
-## Key Components
-
-### Prediction Model
-The prediction model uses historical data to train a Random Forest algorithm. It calculates various technical indicators and uses them as features to predict the price movement.
-
-### Betting Logic
-The betting logic is implemented in the `prediction.js` file. It uses the trained model to make predictions and places bets based on the confidence scores.
-
-### Live Monitoring
-The bot continuously monitors the cryptocurrency rounds and places bets based on the predictions. It uses the `prediction.js` file to make betting decisions and the `profitTracker.js` file to track and analyze the betting performance.
-
-### Backtesting
-The backtesting feature allows you to simulate trading on historical data. It uses the `backtest.js` file to collect historical data and the `backtestSimulator.js` file to run the backtest simulation.
-
-## Performance Metrics
-The bot tracks various performance metrics, including:
-
-- Total number of bets
+- Total number of rounds played
 - Win/Loss ratio
 - Total Profit/Loss
-- Win rate percentage
+- Current winning/losing streak
+- Average bet size
+- ROI percentage
 
-These metrics are displayed after running a backtest simulation.
+## Smart Contract Integration
+
+The bot interacts with two main contracts:
+- PancakeSwap Prediction Contract: For round information and betting
+- WBNB/BUSD Pair Contract: For real-time price data
 
 ## Disclaimer
 This bot is for educational purposes only. Use it at your own risk. The author is not responsible for any losses incurred. Cryptocurrency trading involves significant risk. Always do your own research and never invest more than you can afford to lose.
@@ -101,5 +97,4 @@ This bot is for educational purposes only. Use it at your own risk. The author i
 Contributions are welcome! If you have any suggestions or improvements, please open an issue or submit a pull request.
 
 ## License
-
 This project is licensed under the MIT License - see the LICENSE file for details.
